@@ -1,3 +1,5 @@
+// init_db.js
+// Creates DB (if allowed), tables, and seed data. Safe to run multiple times (idempotent).
 
 const pool = require('./db');
 const mysql2 = require('mysql2/promise');
@@ -5,10 +7,9 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 function getAdminConnectionConfig() {
- 
   const host = process.env.MYSQLHOST || process.env.DB_HOST || 'localhost';
   const port = process.env.MYSQLPORT || process.env.DB_PORT || 3306;
- 
+
   const user =
     process.env.MYSQL_ROOT_USER ||
     process.env.MYSQLUSER ||
@@ -27,7 +28,7 @@ function getAdminConnectionConfig() {
     port: Number(port),
     user,
     password,
-    multipleStatements: true 
+    multipleStatements: true
   };
 }
 
@@ -35,10 +36,8 @@ async function ensureDatabase() {
   const dbName = process.env.MYSQLDATABASE || process.env.DB_NAME || 'restaurant_search';
 
   try {
-
     const connectionUrl = process.env.MYSQL_URL || process.env.DB_URL || process.env.DATABASE_URL;
     if (connectionUrl && /\/[^\/?]+($|\?)/.test(connectionUrl)) {
-
       console.log('Connection URL includes a database. Skipping CREATE DATABASE step.');
       return;
     }
@@ -50,8 +49,7 @@ async function ensureDatabase() {
 
     console.log(`Verified database exists: ${dbName}`);
   } catch (err) {
-    
-    console.warn('CREATE DATABASE not permitted on this provider (continuing):', err.message);
+    console.warn('CREATE DATABASE not permitted on this provider (continuing):', err && err.message ? err.message : err);
   }
 }
 
@@ -85,7 +83,6 @@ async function createTables() {
     );
   `;
 
- 
   await pool.query(restaurantsSQL);
   await pool.query(menuSQL);
   await pool.query(ordersSQL);
@@ -149,25 +146,24 @@ async function seedOrders() {
       [t.restaurantId, t.menuName]
     );
 
-    if (menuRows.length === 0) continue;
-
+    if (!menuRows || menuRows.length === 0) continue;
     const menuId = menuRows[0].id;
 
-    const [[{ count }]] = await pool.query(
+    const [countRows] = await pool.query(
       `SELECT COUNT(*) AS count FROM orders
        WHERE restaurant_id = ? AND menu_item_id = ?`,
       [t.restaurantId, menuId]
     );
 
+    const count = (countRows && countRows[0] && countRows[0].count) ? parseInt(countRows[0].count, 10) : 0;
     const toInsert = t.desired - count;
     if (toInsert <= 0) continue;
 
-    const chunkSize = 500; 
+    const chunkSize = 500;
     let remaining = toInsert;
 
     while (remaining > 0) {
       const chunk = Math.min(chunkSize, remaining);
-
       const values = new Array(chunk).fill('(?, ?)').join(',');
       const params = [];
       for (let i = 0; i < chunk; i++) params.push(t.restaurantId, menuId);
@@ -188,19 +184,17 @@ async function run() {
     await seedOrders();
     console.log('DB initialization complete.');
   } catch (err) {
-    console.error('DB initialization error:', err);
-    process.exitCode = 1;
-  } finally {
-    
-    try {
-      await pool.end();
-    } catch (e) {}
+    console.error('DB initialization error:', err && err.stack ? err.stack : err);
+    // Do not exit the process here — let the caller decide.
+    throw err;
   }
 }
 
-
 if (require.main === module) {
-  run();
+  run().catch(err => {
+    console.error('init_db run failed:', err && err.stack ? err.stack : err);
+    process.exit(1);
+  });
 }
 
 module.exports = { run };
