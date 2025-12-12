@@ -52,14 +52,12 @@ INSERT INTO menu_items (restaurant_id, name, price) VALUES
 (5, 'Hyderabadi Biryani', 240.00);
 
 
--- Insert orders (make some restaurants have more orders for Chicken Biryani)
--- Orders for restaurant 1, menu_item 1: 96 orders
+
 INSERT INTO orders (restaurant_id, menu_item_id)
 SELECT 1, 1 FROM dual
-LIMIT 96; -- MySQL doesn't support SELECT ... LIMIT n to generate rows this way; below we provide explicit inserts using a helper loop if needed.
+LIMIT 96; 
 
 
--- Simpler approach: insert using a small loop (run in MySQL client)
--- Example (run in a MySQL client that supports variables):
+
 SET @i = 1;
 (1,2),(1,2),(1,2),(2,4),(3,6),(4,7),(5,8),(5,8),(5,8),(5,8);
