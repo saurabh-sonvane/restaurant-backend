@@ -15,6 +15,20 @@ It provides powerful APIs to:
 
 It includes full database initialization with pre-seeded data, and is fully compatible with Railway’s managed MySQL service for easy deployment.
 
+## 📘 API Endpoint Table
+
+| **Method** | **Endpoint**                                                                                                 | **Description**                           | **Body (if applicable)**                          |
+| ---------- | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------- | ------------------------------------------------- |
+| **GET**    | `https://restaurant-backend-convertcart.up.railway.app/health`                                               | Health check                              | —                                                 |
+| **GET**    | `https://restaurant-backend-convertcart.up.railway.app/search/dishes?name=biryani&minPrice=100&maxPrice=300` | Search dishes by name and price range     | —                                                 |
+| **GET**    | `https://restaurant-backend-convertcart.up.railway.app/restaurants`                                          | Get all restaurants                       | —                                                 |
+| **GET**    | `https://restaurant-backend-convertcart.up.railway.app/restaurants?city=Hyderabad`                           | Filter restaurants by city                | —                                                 |
+| **GET**    | `https://restaurant-backend-convertcart.up.railway.app/restaurants/1/menu`                                   | Get menu items for a specific restaurant  | —                                                 |
+| **POST**   | `https://restaurant-backend-convertcart.up.railway.app/orders`                                               | Create a new order                        | `json { "restaurant_id": 1, "menu_item_id": 3 } ` |
+| **GET**    | `https://restaurant-backend-convertcart.up.railway.app/orders`                                               | List all orders                           | —                                                 |
+| **GET**    | `https://restaurant-backend-convertcart.up.railway.app/orders?limit=20`                                      | List limited number of orders             | —                                                 |
+| **GET**    | `https://restaurant-backend-convertcart.up.railway.app/orders/stats`                                         | View order statistics (all menus)         | —                                                 |
+| **GET**    | `https://restaurant-backend-convertcart.up.railway.app/orders/stats?menuName=Chicken%20Biryani`              | View order stats for a specific menu item | —                                                 |
 
 
 ## Key files:
