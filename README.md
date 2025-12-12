@@ -1,3 +1,5 @@
+### Deployed URL : https://restaurant-backend-convertcart.up.railway.app
+
 # 🍽️ Restaurant Search Backend – Node.js + Express + MySQL (Railway Deployment)
 
 This project is a backend service built with Node.js, Express.js, and MySQL (hosted on Railway).
