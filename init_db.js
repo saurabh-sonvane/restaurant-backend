@@ -1,27 +1,57 @@
-/*
-  init_db.js
-  - Creates DB (if allowed), tables, and seed data.
-  - Safe to run multiple times (idempotent).
-*/
 
 const pool = require('./db');
 const mysql2 = require('mysql2/promise');
+const dotenv = require('dotenv');
+dotenv.config();
+
+function getAdminConnectionConfig() {
+ 
+  const host = process.env.MYSQLHOST || process.env.DB_HOST || 'localhost';
+  const port = process.env.MYSQLPORT || process.env.DB_PORT || 3306;
+ 
+  const user =
+    process.env.MYSQL_ROOT_USER ||
+    process.env.MYSQLUSER ||
+    process.env.DB_USER ||
+    process.env.DB_ADMIN_USER ||
+    'root';
+  const password =
+    process.env.MYSQL_ROOT_PASSWORD ||
+    process.env.MYSQLPASSWORD ||
+    process.env.DB_PASSWORD ||
+    process.env.DB_ADMIN_PASSWORD ||
+    '';
+
+  return {
+    host,
+    port: Number(port),
+    user,
+    password,
+    multipleStatements: true 
+  };
+}
 
 async function ensureDatabase() {
-  const dbName = process.env.DB_NAME || 'restaurant_search';
+  const dbName = process.env.MYSQLDATABASE || process.env.DB_NAME || 'restaurant_search';
 
   try {
-    const tmp = await mysql2.createConnection({
-      host: process.env.DB_HOST || 'localhost',
-      port: process.env.DB_PORT || 3306,
-      user: process.env.DB_USER || 'root',
-      password: process.env.DB_PASSWORD || ''
-    });
 
+    const connectionUrl = process.env.MYSQL_URL || process.env.DB_URL || process.env.DATABASE_URL;
+    if (connectionUrl && /\/[^\/?]+($|\?)/.test(connectionUrl)) {
+
+      console.log('Connection URL includes a database. Skipping CREATE DATABASE step.');
+      return;
+    }
+
+    const adminConfig = getAdminConnectionConfig();
+    const tmp = await mysql2.createConnection(adminConfig);
     await tmp.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\``);
     await tmp.end();
+
+    console.log(`Verified database exists: ${dbName}`);
   } catch (err) {
-    console.warn('CREATE DATABASE not permitted on this provider (normal on Railway). Continuing...');
+    
+    console.warn('CREATE DATABASE not permitted on this provider (continuing):', err.message);
   }
 }
 
@@ -55,9 +85,11 @@ async function createTables() {
     );
   `;
 
+ 
   await pool.query(restaurantsSQL);
   await pool.query(menuSQL);
   await pool.query(ordersSQL);
+  console.log('Tables ensured.');
 }
 
 async function seedRestaurantsAndMenu() {
@@ -99,6 +131,8 @@ async function seedRestaurantsAndMenu() {
       [restaurant_id, name, price, restaurant_id, name]
     );
   }
+
+  console.log('Seeded restaurants and menu (idempotent).');
 }
 
 async function seedOrders() {
@@ -128,7 +162,7 @@ async function seedOrders() {
     const toInsert = t.desired - count;
     if (toInsert <= 0) continue;
 
-    const chunkSize = 500;
+    const chunkSize = 500; 
     let remaining = toInsert;
 
     while (remaining > 0) {
@@ -142,6 +176,8 @@ async function seedOrders() {
       remaining -= chunk;
     }
   }
+
+  console.log('Seeded orders (idempotent).');
 }
 
 async function run() {
@@ -153,7 +189,18 @@ async function run() {
     console.log('DB initialization complete.');
   } catch (err) {
     console.error('DB initialization error:', err);
+    process.exitCode = 1;
+  } finally {
+    
+    try {
+      await pool.end();
+    } catch (e) {}
   }
+}
+
+
+if (require.main === module) {
+  run();
 }
 
 module.exports = { run };
